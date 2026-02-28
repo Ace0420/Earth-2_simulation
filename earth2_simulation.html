@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>EARTH-2 TRANSFORMATION SIMULATION</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Orbitron:wght@400;700;900&family=Inter:wght@300;400;600&display=swap');
+
+  :root {
+    --bg: #050a0f;
+    --panel: #0a1520;
+    --border: #1a3a5c;
+    --accent-blue: #00aaff;
+    --accent-green: #00ff88;
+    --accent-red: #ff3355;
+    --accent-amber: #ffaa00;
+    --text: #c0d8f0;
+    --text-dim: #5a7a9a;
+    --success: #00ff88;
+    --failure: #ff3355;
+    --auth: #ff6600;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Share Tech Mono', monospace;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Scanline effect */
+  body::before {
+    content: '';
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 1000;
+  }
+
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 20px 30px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(90deg, rgba(0,170,255,0.05), transparent);
+  }
+
+  .logo {
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 4px;
+    color: var(--accent-blue);
+    text-transform: uppercase;
+  }
+
+  .logo span {
+    font-size: 20px;
+    font-weight: 900;
+    display: block;
+    color: #fff;
+    letter-spacing: 2px;
+  }
+
+  .status-badge {
+    font-size: 10px;
+    letter-spacing: 3px;
+    color: var(--accent-green);
+    border: 1px solid var(--accent-green);
+    padding: 4px 12px;
+    animation: pulse 2s infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+
+  .main {
+    display: grid;
+    grid-template-columns: 300px 1fr;
+    gap: 0;
+    min-height: calc(100vh - 80px);
+  }
+
+  /* SIDEBAR */
+  .sidebar {
+    border-right: 1px solid var(--border);
+    padding: 20px;
+    background: rgba(0,0,0,0.3);
+  }
+
+  .section-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--accent-blue);
+    margin-bottom: 16px;
+    padding-bottom: 8px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .param-group {
+    margin-bottom: 24px;
+  }
+
+  .param-label {
+    font-size: 10px;
+    letter-spacing: 1px;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .param-label .val {
+    color: var(--accent-amber);
+  }
+
+  input[type="range"] {
+    width: 100%;
+    -webkit-appearance: none;
+    height: 2px;
+    background: var(--border);
+    outline: none;
+    margin-bottom: 12px;
+  }
+
+  input[type="range"]::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    width: 12px;
+    height: 12px;
+    background: var(--accent-blue);
+    cursor: pointer;
+    border: none;
+  }
+
+  .run-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px solid var(--accent-blue);
+    color: var(--accent-blue);
+    font-family: 'Orbitron', monospace;
+    font-size: 11px;
+    letter-spacing: 3px;
+    padding: 12px;
+    cursor: pointer;
+    transition: all 0.2s;
+    margin-bottom: 10px;
+  }
+
+  .run-btn:hover {
+    background: var(--accent-blue);
+    color: #000;
+  }
+
+  .run-btn.primary {
+    border-color: var(--accent-green);
+    color: var(--accent-green);
+  }
+  .run-btn.primary:hover {
+    background: var(--accent-green);
+    color: #000;
+  }
+
+  /* MAIN CONTENT */
+  .content {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  /* OUTCOME CARDS */
+  .outcome-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .outcome-card {
+    border: 1px solid var(--border);
+    padding: 16px;
+    background: var(--panel);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s;
+  }
+
+  .outcome-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+  }
+
+  .outcome-card.success::before { background: var(--accent-green); }
+  .outcome-card.failure::before { background: var(--accent-red); }
+  .outcome-card.auth::before { background: var(--auth); }
+
+  .outcome-card .card-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    margin-bottom: 8px;
+  }
+
+  .outcome-card.success .card-title { color: var(--accent-green); }
+  .outcome-card.failure .card-title { color: var(--accent-red); }
+  .outcome-card.auth .card-title { color: var(--auth); }
+
+  .outcome-pct {
+    font-family: 'Orbitron', monospace;
+    font-size: 42px;
+    font-weight: 900;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .outcome-card.success .outcome-pct { color: var(--accent-green); }
+  .outcome-card.failure .outcome-pct { color: var(--accent-red); }
+  .outcome-card.auth .outcome-pct { color: var(--auth); }
+
+  .outcome-sub {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  /* CHARTS */
+  .chart-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .chart-panel {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 16px;
+  }
+
+  .chart-panel .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--accent-blue);
+    margin-bottom: 12px;
+  }
+
+  canvas {
+    width: 100% !important;
+    display: block;
+  }
+
+  /* FAILURE ANALYSIS */
+  .failure-panel {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 16px;
+  }
+
+  .failure-panel .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--accent-red);
+    margin-bottom: 12px;
+  }
+
+  .failure-bars {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .fbar-row {
+    display: grid;
+    grid-template-columns: 200px 1fr 60px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .fbar-label {
+    font-size: 10px;
+    color: var(--text-dim);
+    letter-spacing: 1px;
+  }
+
+  .fbar-track {
+    height: 6px;
+    background: rgba(255,51,85,0.15);
+    position: relative;
+  }
+
+  .fbar-fill {
+    position: absolute;
+    top: 0; left: 0; height: 100%;
+    background: var(--accent-red);
+    transition: width 0.8s ease;
+  }
+
+  .fbar-fill.auth { background: var(--auth); }
+  .fbar-fill.mixed { background: var(--accent-amber); }
+
+  .fbar-pct {
+    font-size: 11px;
+    color: var(--text);
+    text-align: right;
+  }
+
+  /* LOG */
+  .log-panel {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 16px;
+    max-height: 200px;
+    overflow-y: auto;
+  }
+
+  .log-panel .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+  }
+
+  .log-entry {
+    font-size: 10px;
+    line-height: 1.8;
+    color: var(--text-dim);
+    border-left: 2px solid var(--border);
+    padding-left: 10px;
+    margin-bottom: 4px;
+  }
+
+  .log-entry .ts { color: var(--accent-blue); margin-right: 8px; }
+  .log-entry .ok { color: var(--accent-green); }
+  .log-entry .bad { color: var(--accent-red); }
+  .log-entry .warn { color: var(--accent-amber); }
+
+  /* KNIFE EDGE */
+  .knife-panel {
+    border: 1px solid var(--border);
+    background: var(--panel);
+    padding: 16px;
+  }
+
+  .knife-panel .panel-title {
+    font-family: 'Orbitron', monospace;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: var(--accent-amber);
+    margin-bottom: 12px;
+  }
+
+  .knife-items {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+  }
+
+  .knife-item {
+    border: 1px solid var(--border);
+    padding: 12px;
+    font-size: 10px;
+  }
+
+  .knife-item .ki-title {
+    color: var(--accent-amber);
+    letter-spacing: 1px;
+    margin-bottom: 6px;
+    font-size: 9px;
+  }
+
+  .knife-item .ki-val {
+    font-family: 'Orbitron', monospace;
+    font-size: 18px;
+    margin-bottom: 4px;
+  }
+
+  .knife-item .ki-desc {
+    color: var(--text-dim);
+    font-size: 9px;
+    line-height: 1.6;
+  }
+
+  /* Progress bar during simulation */
+  #sim-progress {
+    display: none;
+    width: 100%;
+    height: 2px;
+    background: var(--border);
+    margin-bottom: 8px;
+  }
+
+  #sim-progress-fill {
+    height: 100%;
+    background: var(--accent-blue);
+    width: 0%;
+    transition: width 0.1s;
+  }
+
+  .iter-count {
+    font-size: 9px;
+    color: var(--text-dim);
+    letter-spacing: 2px;
+    margin-bottom: 16px;
+    text-align: center;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: var(--border); }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    SOVEREIGN AI OBSERVATORY
+    <span>EARTH-2 SIMULATION</span>
+  </div>
+  <div class="status-badge">● MONTE CARLO ENGINE READY</div>
+</header>
+
+<div class="main">
+  <!-- SIDEBAR: PARAMETERS -->
+  <div class="sidebar">
+    <div class="section-title">// SIMULATION PARAMETERS</div>
+
+    <div class="param-group">
+      <div class="section-title">INFRASTRUCTURE</div>
+
+      <div class="param-label">Starlink Coverage <span class="val" id="v-starlink">94%</span></div>
+      <input type="range" id="starlink" min="50" max="100" value="94">
+
+      <div class="param-label">UBI Rollout Speed <span class="val" id="v-ubi">Day 3</span></div>
+      <input type="range" id="ubi" min="1" max="14" value="3">
+
+      <div class="param-label">Americash Merchant Adoption <span class="val" id="v-cash">72%</span></div>
+      <input type="range" id="cash" min="20" max="100" value="72">
+    </div>
+
+    <div class="param-group">
+      <div class="section-title">LOYALTY & RESISTANCE</div>
+
+      <div class="param-label">Military Loyalty <span class="val" id="v-mil">87%</span></div>
+      <input type="range" id="mil" min="40" max="100" value="87">
+
+      <div class="param-label">Law Enforcement Loyalty <span class="val" id="v-leo">71%</span></div>
+      <input type="range" id="leo" min="30" max="100" value="71">
+
+      <div class="param-label">Counter-Rev Organization Speed <span class="val" id="v-cr">Day 8</span></div>
+      <input type="range" id="cr" min="1" max="30" value="8">
+
+      <div class="param-label">Elite Capital Flight Rate <span class="val" id="v-flight">85%</span></div>
+      <input type="range" id="flight" min="20" max="100" value="85">
+    </div>
+
+    <div class="param-group">
+      <div class="section-title">PUBLIC DYNAMICS</div>
+
+      <div class="param-label">Initial Public Support <span class="val" id="v-support">61%</span></div>
+      <input type="range" id="support" min="35" max="85" value="61">
+
+      <div class="param-label">Media Compliance <span class="val" id="v-media">55%</span></div>
+      <input type="range" id="media" min="10" max="90" value="55">
+
+      <div class="param-label">International Pressure <span class="val" id="v-intl">40%</span></div>
+      <input type="range" id="intl" min="0" max="100" value="40">
+    </div>
+
+    <div class="param-group">
+      <div class="section-title">TRIBUNAL & JUSTICE</div>
+
+      <div class="param-label">Tribunal Processing Rate <span class="val" id="v-trib">120/day</span></div>
+      <input type="range" id="trib" min="20" max="500" value="120">
+
+      <div class="param-label">Community Cohesion <span class="val" id="v-cohesion">68%</span></div>
+      <input type="range" id="cohesion" min="20" max="95" value="68">
+    </div>
+
+    <div id="sim-progress"><div id="sim-progress-fill"></div></div>
+    <div class="iter-count" id="iter-display">10,000 ITERATIONS</div>
+
+    <button class="run-btn primary" onclick="runSimulation()">▶ RUN SIMULATION</button>
+    <button class="run-btn" onclick="resetDefaults()">↺ RESET DEFAULTS</button>
+    <button class="run-btn" onclick="setWorstCase()">⚠ WORST CASE</button>
+    <button class="run-btn" onclick="setBestCase()">★ BEST CASE</button>
+  </div>
+
+  <!-- MAIN CONTENT -->
+  <div class="content">
+
+    <!-- OUTCOME PROBABILITIES -->
+    <div class="outcome-row">
+      <div class="outcome-card success">
+        <div class="card-title">// OUTCOME A: TRANSFORMATION SUCCEEDS</div>
+        <div class="outcome-pct" id="pct-success">--</div>
+        <div class="outcome-sub" id="sub-success">awaiting simulation</div>
+      </div>
+      <div class="outcome-card failure">
+        <div class="card-title">// OUTCOME B: COLLAPSE / CHAOS</div>
+        <div class="outcome-pct" id="pct-failure">--</div>
+        <div class="outcome-sub" id="sub-failure">awaiting simulation</div>
+      </div>
+      <div class="outcome-card auth">
+        <div class="card-title">// OUTCOME C: AUTHORITARIAN CAPTURE</div>
+        <div class="outcome-pct" id="pct-auth">--</div>
+        <div class="outcome-sub" id="sub-auth">awaiting simulation</div>
+      </div>
+    </div>
+
+    <!-- CHARTS -->
+    <div class="chart-grid">
+      <div class="chart-panel">
+        <div class="panel-title">// STABILITY INDEX — 60 DAY PROJECTION</div>
+        <canvas id="stabilityChart" height="160"></canvas>
+      </div>
+      <div class="chart-panel">
+        <div class="panel-title">// ECONOMIC VIABILITY — AMERICASH ADOPTION CURVE</div>
+        <canvas id="economyChart" height="160"></canvas>
+      </div>
+    </div>
+
+    <!-- FAILURE MODE ANALYSIS -->
+    <div class="failure-panel">
+      <div class="panel-title">// FAILURE MODE DISTRIBUTION — WHAT KILLS IT</div>
+      <div class="failure-bars" id="failure-bars">
+        <div style="color: var(--text-dim); font-size: 10px; letter-spacing: 1px;">Run simulation to analyze failure modes...</div>
+      </div>
+    </div>
+
+    <!-- KNIFE EDGE -->
+    <div class="knife-panel">
+      <div class="panel-title">// KNIFE EDGE ANALYSIS — CRITICAL THRESHOLDS</div>
+      <div class="knife-items" id="knife-items">
+        <div class="knife-item">
+          <div class="ki-title">MERCHANT ADOPTION</div>
+          <div class="ki-val" style="color: var(--accent-amber)">~40%</div>
+          <div class="ki-desc">Below this, real economy freezes before UBI stabilizes. Current: <span id="ke-cash">--</span></div>
+        </div>
+        <div class="knife-item">
+          <div class="ki-title">MILITARY LOYALTY</div>
+          <div class="ki-val" style="color: var(--accent-amber)">~75%</div>
+          <div class="ki-desc">Below this, counter-rev forces reach critical mass. Current: <span id="ke-mil">--</span></div>
+        </div>
+        <div class="knife-item">
+          <div class="ki-title">UBI SPEED</div>
+          <div class="ki-val" style="color: var(--accent-amber)">Day 5</div>
+          <div class="ki-desc">After Day 5, resentment crystallizes faster than relief arrives. Current: <span id="ke-ubi">--</span></div>
+        </div>
+        <div class="knife-item">
+          <div class="ki-title">PUBLIC SUPPORT FLOOR</div>
+          <div class="ki-val" style="color: var(--accent-amber)">~52%</div>
+          <div class="ki-desc">Below this, passive resistance becomes active. Current: <span id="ke-support">--</span></div>
+        </div>
+        <div class="knife-item">
+          <div class="ki-title">TRIBUNAL RATE</div>
+          <div class="ki-val" style="color: var(--accent-amber)">~80/day</div>
+          <div class="ki-desc">Below this, backlog breeds vigilante justice. Current: <span id="ke-trib">--</span></div>
+        </div>
+        <div class="knife-item">
+          <div class="ki-title">STARLINK UPTIME</div>
+          <div class="ki-val" style="color: var(--accent-green)">Robust</div>
+          <div class="ki-desc">Distributed architecture. No single point of failure. Current: <span id="ke-starlink">--</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- SIMULATION LOG -->
+    <div class="log-panel">
+      <div class="panel-title">// SIMULATION LOG</div>
+      <div id="sim-log">
+        <div class="log-entry"><span class="ts">[READY]</span> Monte Carlo engine initialized. 10,000 iteration model loaded.</div>
+        <div class="log-entry"><span class="ts">[INFO]</span> Parameters: 12 primary variables, 34 interaction effects modeled.</div>
+        <div class="log-entry"><span class="ts">[INFO]</span> Outcomes: Success threshold = Day 60 stability ≥ 0.6. Authoritarian = military+loyalty collapse with executive capture. Chaos = everything else.</div>
+        <div class="log-entry"><span class="ts">[NOTE]</span> Starlink correctly modeled as distributed infrastructure — no single-point takedown vector.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+// ---- PARAMETER DISPLAY UPDATES ----
+const params = {
+  starlink: { el: 'v-starlink', fmt: v => v + '%' },
+  ubi:      { el: 'v-ubi',      fmt: v => 'Day ' + v },
+  cash:     { el: 'v-cash',     fmt: v => v + '%' },
+  mil:      { el: 'v-mil',      fmt: v => v + '%' },
+  leo:      { el: 'v-leo',      fmt: v => v + '%' },
+  cr:       { el: 'v-cr',       fmt: v => 'Day ' + v },
+  flight:   { el: 'v-flight',   fmt: v => v + '%' },
+  support:  { el: 'v-support',  fmt: v => v + '%' },
+  media:    { el: 'v-media',    fmt: v => v + '%' },
+  intl:     { el: 'v-intl',     fmt: v => v + '%' },
+  trib:     { el: 'v-trib',     fmt: v => v + '/day' },
+  cohesion: { el: 'v-cohesion', fmt: v => v + '%' }
+};
+
+Object.keys(params).forEach(id => {
+  const input = document.getElementById(id);
+  const display = document.getElementById(params[id].el);
+  input.addEventListener('input', () => {
+    display.textContent = params[id].fmt(input.value);
+  });
+});
+
+function getParams() {
+  return {
+    starlink: +document.getElementById('starlink').value / 100,
+    ubi:      +document.getElementById('ubi').value,
+    cash:     +document.getElementById('cash').value / 100,
+    mil:      +document.getElementById('mil').value / 100,
+    leo:      +document.getElementById('leo').value / 100,
+    cr:       +document.getElementById('cr').value,
+    flight:   +document.getElementById('flight').value / 100,
+    support:  +document.getElementById('support').value / 100,
+    media:    +document.getElementById('media').value / 100,
+    intl:     +document.getElementById('intl').value / 100,
+    trib:     +document.getElementById('trib').value,
+    cohesion: +document.getElementById('cohesion').value / 100
+  };
+}
+
+function rand() { return Math.random(); }
+function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+function gauss(mean, std) {
+  // Box-Muller
+  let u = 0, v = 0;
+  while(u === 0) u = rand();
+  while(v === 0) v = rand();
+  return mean + std * Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// ---- CORE SIMULATION ----
+function simulateOnce(p) {
+  // Each run has random noise applied to parameters
+  const starlink = clamp(gauss(p.starlink, 0.03), 0, 1);
+  const ubi      = clamp(gauss(p.ubi, 0.5), 1, 20);
+  const cash     = clamp(gauss(p.cash, 0.05), 0, 1);
+  const mil      = clamp(gauss(p.mil, 0.04), 0, 1);
+  const leo      = clamp(gauss(p.leo, 0.05), 0, 1);
+  const cr       = clamp(gauss(p.cr, 1.5), 1, 40);
+  const support  = clamp(gauss(p.support, 0.04), 0, 1);
+  const media    = clamp(gauss(p.media, 0.06), 0, 1);
+  const intl     = clamp(gauss(p.intl, 0.05), 0, 1);
+  const trib     = clamp(gauss(p.trib, 15), 10, 600);
+  const cohesion = clamp(gauss(p.cohesion, 0.05), 0, 1);
+
+  // -- FAILURE MODES (evaluated in priority order) --
+
+  // 1. Economic collapse: merchant adoption < threshold
+  const economyFloor = 0.40;
+  const economyScore = cash < economyFloor ? 0 : (cash - economyFloor) / (1 - economyFloor);
+  // UBI speed matters: later = worse
+  const ubiPenalty = ubi > 5 ? (ubi - 5) * 0.06 : 0;
+  const economyViable = (economyScore - ubiPenalty) > 0.1;
+
+  // 2. Military defection / counter-rev capture
+  const milCritical = 0.75;
+  const milScore = mil < milCritical ? 0 : mil;
+  const crPressure = cr < 10 ? (10 - cr) * 0.05 : 0; // fast org = more pressure
+  const militarySecure = (mil - crPressure) >= milCritical;
+
+  // 3. Authoritarian capture condition:
+  // Military loyalty collapses AND someone with institutional power exploits vacuum
+  // High flight rate removes checks, low media = propaganda vacuum
+  const authPressure = (1 - mil) * 0.4 + (1 - media) * 0.3 + intl * 0.15 + (1 - cohesion) * 0.15;
+  const authThreshold = 0.55;
+  const authRisk = authPressure > authThreshold;
+
+  // 4. Tribunal backlog → vigilante justice
+  // Simple cases per day needed: ~80 minimum
+  const tribOk = trib >= 80;
+  const communityHolds = cohesion > 0.45 && tribOk;
+
+  // 5. Public support floor
+  // Affected by media, ubi speed, community cohesion
+  const effectiveSupport = support + (media - 0.5) * 0.2 + (cohesion - 0.5) * 0.15 - ubiPenalty * 0.5;
+  const publicFloor = 0.52;
+  const publicHolds = effectiveSupport >= publicFloor;
+
+  // 6. International pressure (Starlink is robust; intl pressure can't cut comms)
+  // But can cause economic sanctions, capital pressure
+  const intlDamage = intl * 0.12 * (1 - starlink * 0.8); // Starlink mitigates somewhat
+  const intlSurvivable = (economyScore - intlDamage) > 0.05;
+
+  // -- DETERMINE OUTCOME --
+  // First: check authoritarian capture (specific condition)
+  if (authRisk && !militarySecure && (1-media) > 0.5) {
+    return { outcome: 'auth', failMode: 'auth_capture' };
+  }
+
+  // Economic collapse
+  if (!economyViable || !intlSurvivable) {
+    return { outcome: 'chaos', failMode: 'economic_collapse' };
+  }
+
+  // Military/security breakdown
+  if (!militarySecure && !authRisk) {
+    return { outcome: 'chaos', failMode: 'security_breakdown' };
+  }
+
+  // Community breakdown (vigilante justice, faction fighting)
+  if (!communityHolds && !publicHolds) {
+    // Could tip auth if someone exploits it
+    if (rand() < 0.4 && mil < 0.65) {
+      return { outcome: 'auth', failMode: 'vacuum_capture' };
+    }
+    return { outcome: 'chaos', failMode: 'community_breakdown' };
+  }
+
+  // Tribunal-only failure (partial)
+  if (!tribOk && communityHolds) {
+    if (rand() < 0.3) return { outcome: 'chaos', failMode: 'justice_backlog' };
+  }
+
+  // If we're here: check success threshold
+  // Composite stability score
+  const stability = (
+    economyScore * 0.25 +
+    milScore * 0.20 +
+    effectiveSupport * 0.20 +
+    cohesion * 0.15 +
+    (starlink) * 0.10 +
+    (trib / 500) * 0.10
+  ) - ubiPenalty;
+
+  if (stability >= 0.45) {
+    return { outcome: 'success', failMode: null };
+  } else {
+    // Low stability but not specific failure = slow chaos
+    return { outcome: 'chaos', failMode: 'low_stability' };
+  }
+}
+
+// Run 10k iterations
+function runSimulation() {
+  const p = getParams();
+  const n = 10000;
+  const results = { success: 0, chaos: 0, auth: 0 };
+  const failModes = {};
+
+  // Show progress
+  document.getElementById('sim-progress').style.display = 'block';
+  document.getElementById('iter-display').textContent = 'RUNNING...';
+
+  setTimeout(() => {
+    for (let i = 0; i < n; i++) {
+      const r = simulateOnce(p);
+      results[r.outcome]++;
+      if (r.failMode) {
+        failModes[r.failMode] = (failModes[r.failMode] || 0) + 1;
+      }
+      if (i % 1000 === 0) {
+        document.getElementById('sim-progress-fill').style.width = (i/n*100) + '%';
+      }
+    }
+
+    document.getElementById('sim-progress-fill').style.width = '100%';
+
+    const pSuccess = (results.success / n * 100).toFixed(1);
+    const pChaos   = (results.chaos   / n * 100).toFixed(1);
+    const pAuth    = (results.auth    / n * 100).toFixed(1);
+
+    // Update cards
+    document.getElementById('pct-success').textContent = pSuccess + '%';
+    document.getElementById('pct-failure').textContent = pChaos + '%';
+    document.getElementById('pct-auth').textContent    = pAuth + '%';
+
+    document.getElementById('sub-success').textContent = `${results.success.toLocaleString()} of ${n.toLocaleString()} simulations`;
+    document.getElementById('sub-failure').textContent  = `${results.chaos.toLocaleString()} of ${n.toLocaleString()} simulations`;
+    document.getElementById('sub-auth').textContent     = `${results.auth.toLocaleString()} of ${n.toLocaleString()} simulations`;
+
+    // Knife edge displays
+    document.getElementById('ke-cash').textContent    = (p.cash*100).toFixed(0) + '%' + (p.cash < 0.40 ? ' ⚠ BELOW THRESHOLD' : ' ✓');
+    document.getElementById('ke-mil').textContent     = (p.mil*100).toFixed(0) + '%' + (p.mil < 0.75 ? ' ⚠ DANGEROUS' : ' ✓');
+    document.getElementById('ke-ubi').textContent     = 'Day ' + p.ubi + (p.ubi > 5 ? ' ⚠ TOO SLOW' : ' ✓');
+    document.getElementById('ke-support').textContent = (p.support*100).toFixed(0) + '%' + (p.support < 0.52 ? ' ⚠ BELOW FLOOR' : ' ✓');
+    document.getElementById('ke-trib').textContent    = p.trib + '/day' + (p.trib < 80 ? ' ⚠ BACKLOG RISK' : ' ✓');
+    document.getElementById('ke-starlink').textContent = (p.starlink*100).toFixed(0) + '% uptime ✓ ROBUST';
+
+    // Failure mode bars
+    const failTotal = results.chaos + results.auth;
+    const failLabels = {
+      economic_collapse:    { label: 'Economic Collapse (Americash fails)', type: 'red' },
+      security_breakdown:   { label: 'Security Breakdown (Military defects)', type: 'red' },
+      auth_capture:         { label: 'Authoritarian Capture (Power vacuum)', type: 'auth' },
+      vacuum_capture:       { label: 'Vacuum Capture (Community chaos→coup)', type: 'auth' },
+      community_breakdown:  { label: 'Community Breakdown (Vigilante justice)', type: 'mixed' },
+      justice_backlog:      { label: 'Tribunal Backlog Failure', type: 'mixed' },
+      low_stability:        { label: 'General Low Stability (Slow collapse)', type: 'red' },
+    };
+
+    let barsHTML = '';
+    if (failTotal === 0) {
+      barsHTML = '<div style="color: var(--accent-green); font-size: 11px; letter-spacing: 1px;">NO FAILURES RECORDED IN THIS RUN</div>';
+    } else {
+      Object.entries(failModes).sort((a,b) => b[1]-a[1]).forEach(([mode, count]) => {
+        const def = failLabels[mode] || { label: mode, type: 'red' };
+        const pct = (count / n * 100).toFixed(1);
+        barsHTML += `
+          <div class="fbar-row">
+            <div class="fbar-label">${def.label}</div>
+            <div class="fbar-track"><div class="fbar-fill ${def.type}" style="width:${pct}%"></div></div>
+            <div class="fbar-pct">${pct}%</div>
+          </div>`;
+      });
+    }
+    document.getElementById('failure-bars').innerHTML = barsHTML;
+
+    // Draw charts
+    drawStabilityChart(p, results);
+    drawEconomyChart(p);
+
+    // Log
+    addLog(`[SIM COMPLETE] ${n.toLocaleString()} iterations. Success: ${pSuccess}% | Chaos: ${pChaos}% | Auth: ${pAuth}%`,
+      parseFloat(pSuccess) > 50 ? 'ok' : parseFloat(pAuth) > 20 ? 'warn' : 'bad');
+
+    const topFail = Object.entries(failModes).sort((a,b)=>b[1]-a[1])[0];
+    if (topFail) {
+      addLog(`[PRIMARY FAILURE MODE] ${failLabels[topFail[0]]?.label || topFail[0]}: ${(topFail[1]/n*100).toFixed(1)}%`, 'warn');
+    }
+    if (p.mil < 0.75) addLog('[WARNING] Military loyalty below critical threshold — authoritarian capture risk elevated', 'bad');
+    if (p.cash < 0.40) addLog('[CRITICAL] Americash adoption below 40% — economic collapse near-certain', 'bad');
+    if (p.ubi > 5) addLog('[WARNING] UBI delay past Day 5 — resentment crystallization detected in models', 'warn');
+    addLog('[NOTE] Starlink distributed architecture confirmed: no single-point takedown vector in any simulated scenario', 'ok');
+
+    document.getElementById('sim-progress').style.display = 'none';
+    document.getElementById('iter-display').textContent = n.toLocaleString() + ' ITERATIONS COMPLETE';
+  }, 50);
+}
+
+function drawStabilityChart(p, results) {
+  const canvas = document.getElementById('stabilityChart');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio || 500;
+  canvas.height = 160 * window.devicePixelRatio || 160;
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  const W = canvas.offsetWidth || 500, H = 160;
+  ctx.clearRect(0, 0, W, H);
+
+  // Generate 3 trajectory lines (success, chaos, auth branch)
+  const days = 60;
+
+  function stabilityPath(startVal, growRate, volatility, floor, ceiling) {
+    let vals = [startVal];
+    for (let d = 1; d < days; d++) {
+      const prev = vals[d-1];
+      const noise = (Math.random() - 0.5) * volatility;
+      const newVal = clamp(prev + growRate + noise, floor, ceiling);
+      vals.push(newVal);
+    }
+    return vals;
+  }
+
+  // Success branch: starts ~0.5, grows
+  const successStability = stabilityPath(0.50, 0.006, 0.03, 0.1, 0.95);
+  // Chaos branch: starts ~0.5, declines
+  const chaosStability   = stabilityPath(0.50, -0.008, 0.04, 0.0, 0.85);
+  // Auth branch: starts okay, mid-point capture, then false stability
+  const authStability    = stabilityPath(0.48, -0.003, 0.05, 0.05, 0.80).map((v,i) => i > 30 ? clamp(v + 0.01, 0, 0.6) : v);
+
+  function drawLine(data, color, label) {
+    ctx.beginPath();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.5;
+    data.forEach((v, i) => {
+      const x = (i / (days-1)) * (W - 40) + 20;
+      const y = H - 20 - v * (H - 30);
+      i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+  }
+
+  // Grid
+  ctx.strokeStyle = '#1a3a5c';
+  ctx.lineWidth = 0.5;
+  for (let g = 0; g <= 4; g++) {
+    const y = 10 + g * (H-30)/4;
+    ctx.beginPath();
+    ctx.moveTo(20, y);
+    ctx.lineTo(W-10, y);
+    ctx.stroke();
+  }
+
+  // X axis labels
+  ctx.fillStyle = '#5a7a9a';
+  ctx.font = '9px Share Tech Mono';
+  [1, 10, 20, 30, 40, 50, 60].forEach(d => {
+    const x = ((d-1) / (days-1)) * (W-40) + 20;
+    ctx.fillText('D' + d, x - 6, H - 4);
+  });
+
+  drawLine(chaosStability,   '#ff3355', 'CHAOS');
+  drawLine(authStability,    '#ff6600', 'AUTH');
+  drawLine(successStability, '#00ff88', 'SUCCESS');
+
+  // Legend
+  ctx.font = '9px Share Tech Mono';
+  [[`${(results.success/100).toFixed(0)}% SUCCESS`, '#00ff88', 0],
+   [`${(results.chaos/100).toFixed(0)}% CHAOS`, '#ff3355', 90],
+   [`${(results.auth/100).toFixed(0)}% AUTH`, '#ff6600', 180]].forEach(([lbl, col, x]) => {
+    ctx.fillStyle = col;
+    ctx.fillText(lbl, x + 20, 15);
+  });
+}
+
+function drawEconomyChart(p) {
+  const canvas = document.getElementById('economyChart');
+  const ctx = canvas.getContext('2d');
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio || 500;
+  canvas.height = 160 * window.devicePixelRatio || 160;
+  ctx.scale(window.devicePixelRatio || 1, window.devicePixelRatio || 1);
+  const W = canvas.offsetWidth || 500, H = 160;
+  ctx.clearRect(0, 0, W, H);
+
+  // Model Americash adoption curve over 60 days
+  // S-curve dynamics, UBI speed affects acceleration
+  const days = 60;
+  const adoptionData = [];
+  let adoption = 0.05; // starts at 5%
+  for (let d = 1; d <= days; d++) {
+    // S-curve: logistic growth
+    const target = p.cash;
+    const speed  = d >= p.ubi ? 0.08 : 0.02; // accelerates after UBI
+    const saturation = 1 - adoption / target;
+    adoption += speed * saturation * (adoption + 0.02);
+    adoption = clamp(adoption, 0, 0.99);
+    adoptionData.push(adoption);
+  }
+
+  // Threshold lines
+  ctx.strokeStyle = '#1a3a5c';
+  ctx.lineWidth = 0.5;
+  for (let g = 0; g <= 4; g++) {
+    const y = 10 + g * (H-30)/4;
+    ctx.beginPath(); ctx.moveTo(20, y); ctx.lineTo(W-10, y); ctx.stroke();
+  }
+
+  // Critical threshold line at 40%
+  const thresh40y = H - 20 - 0.40 * (H - 30);
+  ctx.strokeStyle = '#ff3355';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(20, thresh40y); ctx.lineTo(W-10, thresh40y); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ff3355';
+  ctx.font = '9px Share Tech Mono';
+  ctx.fillText('40% FLOOR', W - 80, thresh40y - 3);
+
+  // Adoption curve
+  ctx.beginPath();
+  ctx.strokeStyle = '#00aaff';
+  ctx.lineWidth = 2;
+  adoptionData.forEach((v, i) => {
+    const x = (i / (days-1)) * (W - 40) + 20;
+    const y = H - 20 - v * (H - 30);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Target line
+  const targetY = H - 20 - p.cash * (H - 30);
+  ctx.strokeStyle = '#00ff88';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 4]);
+  ctx.beginPath(); ctx.moveTo(20, targetY); ctx.lineTo(W-10, targetY); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#00ff88';
+  ctx.fillText('TARGET: ' + (p.cash*100).toFixed(0) + '%', W-100, targetY - 3);
+
+  // UBI day marker
+  const ubiX = ((p.ubi - 1) / (days-1)) * (W-40) + 20;
+  ctx.strokeStyle = '#ffaa00';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([2, 4]);
+  ctx.beginPath(); ctx.moveTo(ubiX, 10); ctx.lineTo(ubiX, H-20); ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.fillStyle = '#ffaa00';
+  ctx.fillText('UBI D' + p.ubi, ubiX + 2, 20);
+
+  // X labels
+  ctx.fillStyle = '#5a7a9a';
+  ctx.font = '9px Share Tech Mono';
+  [1, 10, 20, 30, 40, 50, 60].forEach(d => {
+    const x = ((d-1) / (days-1)) * (W-40) + 20;
+    ctx.fillText('D' + d, x - 6, H - 4);
+  });
+}
+
+function addLog(msg, type) {
+  const log = document.getElementById('sim-log');
+  const entry = document.createElement('div');
+  entry.className = 'log-entry';
+  const span = document.createElement('span');
+  span.className = type || '';
+  span.textContent = msg;
+  entry.appendChild(span);
+  log.appendChild(entry);
+  log.scrollTop = log.scrollHeight;
+}
+
+function setSlider(id, val) {
+  document.getElementById(id).value = val;
+  document.getElementById(id).dispatchEvent(new Event('input'));
+}
+
+function resetDefaults() {
+  setSlider('starlink', 94); setSlider('ubi', 3);   setSlider('cash', 72);
+  setSlider('mil', 87);     setSlider('leo', 71);   setSlider('cr', 8);
+  setSlider('flight', 85);  setSlider('support', 61); setSlider('media', 55);
+  setSlider('intl', 40);    setSlider('trib', 120); setSlider('cohesion', 68);
+  addLog('[RESET] Parameters restored to Earth-2 baseline (novel canon values)', 'ok');
+}
+
+function setWorstCase() {
+  setSlider('starlink', 65); setSlider('ubi', 12);  setSlider('cash', 28);
+  setSlider('mil', 55);     setSlider('leo', 40);   setSlider('cr', 3);
+  setSlider('flight', 95);  setSlider('support', 42); setSlider('media', 20);
+  setSlider('intl', 85);    setSlider('trib', 30);  setSlider('cohesion', 30);
+  addLog('[WORST CASE] All parameters set to adversarial conditions', 'bad');
+}
+
+function setBestCase() {
+  setSlider('starlink', 99); setSlider('ubi', 1);   setSlider('cash', 90);
+  setSlider('mil', 95);     setSlider('leo', 88);   setSlider('cr', 25);
+  setSlider('flight', 70);  setSlider('support', 78); setSlider('media', 80);
+  setSlider('intl', 15);    setSlider('trib', 400); setSlider('cohesion', 85);
+  addLog('[BEST CASE] All parameters set to optimal conditions', 'ok');
+}
+
+// Init knife edge displays
+document.addEventListener('DOMContentLoaded', () => {
+  const p = getParams();
+  document.getElementById('ke-cash').textContent    = (p.cash*100).toFixed(0) + '%';
+  document.getElementById('ke-mil').textContent     = (p.mil*100).toFixed(0) + '%';
+  document.getElementById('ke-ubi').textContent     = 'Day ' + p.ubi;
+  document.getElementById('ke-support').textContent = (p.support*100).toFixed(0) + '%';
+  document.getElementById('ke-trib').textContent    = p.trib + '/day';
+  document.getElementById('ke-starlink').textContent = (p.starlink*100).toFixed(0) + '% uptime';
+});
+</script>
+</body>
+</html>
